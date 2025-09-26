@@ -33,8 +33,8 @@ public class PositionMapper : MonoBehaviour
             // Map to mm
             Vector3 mmPos = new Vector3(
                 Remap(unityPos.x, xMinUnity, xMaxUnity, xMinMM, xMaxMM, flipX),
-                Remap(unityPos.y, yMinUnity, yMaxUnity, yMinMM, yMaxMM, flipY),
-                Remap(unityPos.z, zMinUnity, zMaxUnity, zMinMM, zMaxMM, flipZ)
+                Remap(unityPos.z, yMinUnity, yMaxUnity, yMinMM, yMaxMM, flipY),
+                Remap(unityPos.y, zMinUnity, zMaxUnity, zMinMM, zMaxMM, flipZ)
             );
 
             Debug.Log("MM Position: " + mmPos);
