@@ -1,0 +1,43 @@
+# Use Unity's YAML merge tool for scenes, prefabs and other text-serialised Unity assets
+# You must configure the merge driver (see README below for commands)
+*.unity merge=unityyamlmerge eol=lf
+*.prefab merge=unityyamlmerge eol=lf
+*.asset merge=unityyamlmerge eol=lf
+*.anim merge=unityyamlmerge eol=lf
+*.controller merge=unityyamlmerge eol=lf
+*.mat merge=unityyamlmerge eol=lf
+*.mask merge=unityyamlmerge eol=lf
+
+# Unity meta files are text and should be merged
+*.meta text eol=lf
+
+# Treat known binary assets as binary (don't attempt textual merges)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.psd binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.fbx binary
+*.obj binary
+*.3ds binary
+*.dae binary
+*.stl binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.mkv binary
+*.wav binary
+*.ogg binary
+*.aiff binary
+*.zip binary
+*.rar binary
+*.7z binary
+*.unitypackage binary
+
+# Keep packages lockfile text (optional)
+Packages/packages-lock.json text eol=lf
+
+# End of .gitattributes
