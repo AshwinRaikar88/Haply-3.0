@@ -323,8 +323,8 @@ GameObject:
   - component: {fileID: 421801850}
   - component: {fileID: 421801852}
   - component: {fileID: 421801851}
-  - component: {fileID: 421801853}
   - component: {fileID: 421801854}
+  - component: {fileID: 421801855}
   m_Layer: 0
   m_Name: Cursor
   m_TagString: Untagged
@@ -383,7 +383,7 @@ MonoBehaviour:
   modelParent: {fileID: 0}
   model: {fileID: 64497171}
   positionSmoothness: 0
---- !u!114 &421801853
+--- !u!114 &421801854
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -392,20 +392,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 421801849}
   m_Enabled: 0
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ce67a4352204b14ba1b05c60c2a10bc, type: 3}
+  m_Script: {fileID: 11500000, guid: 7d4fe093619bd4a44b01ab3177cb205e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PositionMapper
+  m_EditorClassIdentifier: Assembly-CSharp::PositionMapperWithTCP
   xMinMM: -250
   xMaxMM: 250
   yMinMM: 150
   yMaxMM: 250
-  zMinMM: 20
-  zMaxMM: 550
-  flipX: 0
-  flipY: 0
+  zMinMM: -180
+  zMaxMM: 500
+  flipX: 1
+  flipY: 1
   flipZ: 0
-  updateInterval: 1
---- !u!114 &421801854
+  serverIP: 127.0.0.1
+  serverPort: 5005
+  updateInterval: 0.5
+--- !u!114 &421801855
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -414,20 +416,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 421801849}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d4fe093619bd4a44b01ab3177cb205e, type: 3}
+  m_Script: {fileID: 11500000, guid: 5ce67a4352204b14ba1b05c60c2a10bc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PositionMapperWithTCP
+  m_EditorClassIdentifier: Assembly-CSharp::PositionMapper
   xMinMM: -250
   xMaxMM: 250
   yMinMM: 150
   yMaxMM: 250
-  zMinMM: -20
-  zMaxMM: 550
+  zMinMM: -200
+  zMaxMM: 500
   flipX: 1
-  flipY: 0
+  flipY: 1
   flipZ: 0
-  serverIP: 10.3.36.6
-  serverPort: 5005
   updateInterval: 1
 --- !u!1 &1371361688
 GameObject:
