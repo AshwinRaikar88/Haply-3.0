@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Net.Sockets;
 using System.Text;
+using System.Collections;
 
 public class PositionMapperWithTCP : MonoBehaviour
 {
@@ -30,23 +31,59 @@ public class PositionMapperWithTCP : MonoBehaviour
     public float updateInterval = 1f;
     private float timer = 0f;
 
+    // Reconnect settings
+    public float reconnectDelay = 5f;
+    private bool connecting = false;
+
     void Start()
     {
-        try
+        StartCoroutine(ConnectToServer());
+    }
+
+    IEnumerator ConnectToServer()
+    {
+        connecting = true;
+        while (client == null || !client.Connected)
         {
-            client = new TcpClient(serverIP, serverPort);
-            stream = client.GetStream();
-            Debug.Log("Connected to arm controller server.");
+            try
+            {
+                client = new TcpClient();
+                var result = client.BeginConnect(serverIP, serverPort, null, null);
+                bool success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
+
+                if (!success)
+                {
+                    Debug.LogWarning("TCP: Connection attempt timed out.");
+                    client.Close();
+                }
+                else
+                {
+                    client.EndConnect(result);
+                    stream = client.GetStream();
+                    Debug.Log("Connected to arm controller server.");
+                    break; // exit loop when connected
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("TCP: Failed to connect. Error: " + e.Message);
+                if (client != null) client.Close();
+            }
+
+            // Wait before retrying
+            yield return new WaitForSeconds(reconnectDelay);
         }
-        catch (Exception e)
-        {
-            Debug.LogError("Failed to connect to server: " + e.Message);
-        }
+        connecting = false;
     }
 
     void Update()
     {
-        if (client == null || stream == null || !client.Connected) return;
+        // Reconnect if disconnected
+        if ((client == null || stream == null || !client.Connected) && !connecting)
+        {
+            StartCoroutine(ConnectToServer());
+            return;
+        }
 
         timer += Time.deltaTime;
         if (timer >= updateInterval)
@@ -65,19 +102,22 @@ public class PositionMapperWithTCP : MonoBehaviour
             // Create JSON
             string json = string.Format("{{\"x\":{0},\"y\":{1},\"z\":{2}}}", mmPos.x, mmPos.y, mmPos.z);
 
-
-
-
             try
             {
-                byte[] data = Encoding.UTF8.GetBytes(json);
-                stream.Write(data, 0, data.Length);
-                Debug.Log("mmPos: " + mmPos);
-                Debug.Log("Sent to server: " + json);
+                if (stream != null && client.Connected)
+                {
+                    byte[] data = Encoding.UTF8.GetBytes(json);
+                    stream.Write(data, 0, data.Length);
+                    Debug.Log("mmPos: " + mmPos);
+                    Debug.Log("Sent to server: " + json);
+                }
             }
             catch (Exception e)
             {
-                Debug.LogError("Failed to send data: " + e.Message);
+                Debug.LogWarning("TCP: Failed to send data. Will retry connection. Error: " + e.Message);
+                if (client != null) client.Close();
+                client = null;
+                stream = null;
             }
         }
     }
