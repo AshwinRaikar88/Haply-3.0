@@ -107,7 +107,7 @@ public class PositionMapperWithTCP : MonoBehaviour
                 if (stream != null && client.Connected)
                 {
                     byte[] data = Encoding.UTF8.GetBytes(json);
-                    stream.Write(data, 0, data.Length);
+                    stream.WriteAsync(data, 0, data.Length);
                     Debug.Log("mmPos: " + mmPos);
                     Debug.Log("Sent to server: " + json);
                 }

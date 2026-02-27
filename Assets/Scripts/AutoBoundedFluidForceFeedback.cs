@@ -3,23 +3,26 @@ using Haply.Inverse.DeviceControllers;
 using Haply.Inverse.DeviceData;
 using UnityEngine;
 
-namespace Haply.Samples.Tutorials._4D_AutoBoundedFluid
+namespace Haply.Experiments._4D_AutoBoundedFluid
 {
     public class AutoBoundedFluidForceFeedback : MonoBehaviour
     {
         public Inverse3Controller inverse3;
 
+        [Header("Force Feedback")]
+        public bool forceFeedbackEnabled = true;
+
         [Header("Fluid Properties")]
         [Range(0f, 5f)]
-        public float viscosity = 0.5f;       // drag strength
+        public float viscosity = 0.5f;
         [Range(0f, 3f)]
-        public float densityGradient = 1f;   // stronger near center
+        public float densityGradient = 1f;
 
         [Header("Force Safety")]
         public float maxForce = 5f;
 
         [Header("Fluid Detection")]
-        public string fluidLayerName = "FluidZone"; // all objects on this layer will be fluid
+        public string fluidLayerName = "FluidZone";
 
         private int fluidLayer;
         private bool _insideFluid;
@@ -45,7 +48,6 @@ namespace Haply.Samples.Tutorials._4D_AutoBoundedFluid
 
         private void FixedUpdate()
         {
-            // Compute center and inside state on main thread
             Vector3 center = transform.position;
 
             Vector3 localCursor = inverse3.CursorLocalPosition;
@@ -54,7 +56,6 @@ namespace Haply.Samples.Tutorials._4D_AutoBoundedFluid
             bool inside = false;
             if (fluidLayer != -1)
             {
-                // small sphere overlap to detect any fluid object
                 Collider[] hits = Physics.OverlapSphere(worldCursor, 0.001f, 1 << fluidLayer);
                 inside = hits.Length > 0;
             }
@@ -95,25 +96,36 @@ namespace Haply.Samples.Tutorials._4D_AutoBoundedFluid
             inverse3.Release();
         }
 
+        /// <summary>
+        /// Enable or disable force feedback from any external script.
+        /// </summary>
+        public void SetForceFeedback(bool enabled)
+        {
+            forceFeedbackEnabled = enabled;
+        }
+
         private Vector3 FluidForce(Vector3 cursorPos, Vector3 cursorVel, Vector3 center)
         {
-            // Smooth velocity
             _smoothedVelocity = Vector3.Lerp(_smoothedVelocity, cursorVel, 0.2f);
 
-            // Base viscous drag
             Vector3 drag = -viscosity * _smoothedVelocity;
 
-            // Density factor stronger near center
             float distance = (cursorPos - center).magnitude;
             float densityFactor = 1f + densityGradient / (1f + Mathf.Max(distance, 0.01f));
 
-            // Clamp max force
             return Vector3.ClampMagnitude(drag * densityFactor, maxForce);
         }
 
         private void OnDeviceStateChanged(object sender, Inverse3EventArgs args)
         {
             var inverse3 = args.DeviceController;
+
+            if (!forceFeedbackEnabled)
+            {
+                inverse3.SetCursorLocalForce(Vector3.zero);
+                return;
+            }
+
             var sceneData = GetSceneData();
 
             if (!sceneData.insideFluid)
