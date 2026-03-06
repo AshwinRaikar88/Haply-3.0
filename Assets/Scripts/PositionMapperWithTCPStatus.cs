@@ -3,12 +3,12 @@ using UnityEngine.UI;
 using System;
 using System.Net.Sockets;
 using System.Text;
+using System.Globalization;
 using System.Collections;
 
 /// <summary>
-/// Streams this GameObject's position to the xArm server.
-/// Guards against NaN/Infinity before every send so the server
-/// never receives illegal JSON values.
+/// Streams position to the xArm server and exposes Grab / Release
+/// methods you can wire to UI Buttons in the Inspector.
 /// </summary>
 public class PositionMapperWithTCPStatus : MonoBehaviour
 {
@@ -30,14 +30,20 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
     public string serverIP   = "192.168.1.188";
     public int    serverPort = 5005;
 
-    // ── Optional status label ─────────────────────────────────────────────
-    public Text statusLabel;
+    // ── UI ────────────────────────────────────────────────────────────────
+    [Header("Status")]
+    public Text statusLabel;        // drag any UI Text here for live status
+
+    [Header("Gripper Buttons")]
+    [Tooltip("Drag your Grab UI Button here")]
+    public Button grabButton;
+
+    [Tooltip("Drag your Release UI Button here")]
+    public Button releaseButton;
 
     // ── Timing ────────────────────────────────────────────────────────────
-    [Tooltip("Seconds between position updates sent to the server")]
+    [Header("Timing")]
     public float sendInterval   = 0.5f;
-
-    [Tooltip("Seconds between reconnect attempts")]
     public float reconnectDelay = 3f;
 
     // ══════════════════════════════════════════════════════════════════════
@@ -60,6 +66,14 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
     void Start()
     {
         SetStatus(ConnState.Disconnected, "Starting…");
+
+        // Wire buttons — safe even if not assigned in Inspector
+        if (grabButton   != null) grabButton  .onClick.AddListener(OnGrabPressed);
+        if (releaseButton != null) releaseButton.onClick.AddListener(OnReleasePressed);
+
+        // Buttons disabled until we're online
+        SetGripperButtonsInteractable(false);
+
         TryConnect();
     }
 
@@ -85,8 +99,25 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
         _sendTimer += Time.deltaTime;
         if (_sendTimer < sendInterval) return;
         _sendTimer = 0f;
-
         SendPosition();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Gripper public API — called by UI Button onClick events
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>Called by the Grab UI Button.</summary>
+    public void OnGrabPressed()
+    {
+        Debug.Log("[Gripper] Grab pressed");
+        SendRaw("{\"gripper\":\"grab\"}\n");
+    }
+
+    /// <summary>Called by the Release UI Button.</summary>
+    public void OnReleasePressed()
+    {
+        Debug.Log("[Gripper] Release pressed");
+        SendRaw("{\"gripper\":\"release\"}\n");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -138,8 +169,8 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
 
             yield return StartCoroutine(ReadWelcomeCoroutine());
 
-            if (_rejected)                                    break;
-            if (IsConnected() && _connState == ConnState.Online) break;
+            if (_rejected)                                           break;
+            if (IsConnected() && _connState == ConnState.Online)     break;
 
             CloseSocket();
             yield return new WaitForSeconds(reconnectDelay);
@@ -195,11 +226,15 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
         {
             WelcomePayload p = JsonUtility.FromJson<WelcomePayload>(frame);
             if (p.connected)
+            {
                 SetStatus(ConnState.Online, p.message);
+                SetGripperButtonsInteractable(true);
+            }
             else
             {
                 _rejected = true;
                 SetStatus(ConnState.Rejected, $"{p.reason}: {p.message}");
+                SetGripperButtonsInteractable(false);
                 CloseSocket();
             }
         }
@@ -222,26 +257,29 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
         float mmY = Remap(u.z, yMinUnity, yMaxUnity, yMinMM, yMaxMM, flipY);
         float mmZ = Remap(u.y, zMinUnity, zMaxUnity, zMinMM, zMaxMM, flipZ);
 
-        // ── NaN / Infinity guard ───────────────────────────────────────────
-        // If Unity position hasn't settled yet (e.g. first frame after spawn),
-        // the remapped value can be NaN, which is illegal in JSON and will
-        // cause the server to reject the frame.  Skip the send this tick.
-        if (!IsFiniteFloat(mmX) || !IsFiniteFloat(mmY) || !IsFiniteFloat(mmZ))
+        if (!IsFinite(mmX) || !IsFinite(mmY) || !IsFinite(mmZ))
         {
-            Debug.LogWarning($"[TCP] Skipping send — non-finite value: x={mmX} y={mmY} z={mmZ}");
+            Debug.LogWarning($"[TCP] Skipping send — non-finite: x={mmX} y={mmY} z={mmZ}");
             return;
         }
 
-        // Pre-format each float to avoid format-specifier ambiguity inside
-        // interpolated strings with escaped braces (which caused "z":F2 bugs).
-        string sx   = mmX.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        string sy   = mmY.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        string sz   = mmZ.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        string json = "{\"x\":" + sx + ",\"y\":" + sy + ",\"z\":" + sz + "}\n";
+        string sx = mmX.ToString("F2", CultureInfo.InvariantCulture);
+        string sy = mmY.ToString("F2", CultureInfo.InvariantCulture);
+        string sz = mmZ.ToString("F2", CultureInfo.InvariantCulture);
+        SendRaw("{\"x\":" + sx + ",\"y\":" + sy + ",\"z\":" + sz + "}\n");
+    }
 
+    /// <summary>Send a pre-built newline-terminated JSON string.</summary>
+    private void SendRaw(string jsonWithNewline)
+    {
+        if (!IsConnected())
+        {
+            Debug.LogWarning("[TCP] SendRaw: not connected");
+            return;
+        }
         try
         {
-            byte[] data = Encoding.UTF8.GetBytes(json);
+            byte[] data = Encoding.UTF8.GetBytes(jsonWithNewline);
             _stream.Write(data, 0, data.Length);
         }
         catch (Exception ex)
@@ -250,9 +288,6 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
             CloseSocket();
         }
     }
-
-    private static bool IsFiniteFloat(float v) =>
-        !float.IsNaN(v) && !float.IsInfinity(v);
 
     // ══════════════════════════════════════════════════════════════════════
     // Receive
@@ -298,10 +333,17 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
 
     private void CloseSocket()
     {
+        SetGripperButtonsInteractable(false);
         try { _stream?.Close(); } catch { /* ignore */ }
         try { _client?.Close(); } catch { /* ignore */ }
         _stream = null;
         _client = null;
+    }
+
+    private void SetGripperButtonsInteractable(bool on)
+    {
+        if (grabButton    != null) grabButton   .interactable = on;
+        if (releaseButton != null) releaseButton.interactable = on;
     }
 
     private void SetStatus(ConnState state, string msg)
@@ -326,6 +368,8 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
         if (flip) t = 1f - t;
         return Mathf.Lerp(tMin, tMax, t);
     }
+
+    private static bool IsFinite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
 
     void OnApplicationQuit() => CloseSocket();
 
