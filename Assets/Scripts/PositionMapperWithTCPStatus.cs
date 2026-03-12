@@ -32,7 +32,7 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
 
     // ── UI ────────────────────────────────────────────────────────────────
     [Header("Status")]
-    public Text statusLabel;        // drag any UI Text here for live status
+    public TMPro.TextMeshProUGUI statusLabel;        // drag any UI Text here for live status
 
     [Header("Gripper Buttons")]
     [Tooltip("Drag your Grab UI Button here")]
@@ -118,6 +118,12 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
     {
         Debug.Log("[Gripper] Release pressed");
         SendRaw("{\"gripper\":\"release\"}\n");
+    }
+
+    public void TerminatePythonServer()
+    {
+        Debug.Log("[TCP] Sending terminate_server command");
+        SendRaw("{\"terminate_server\": true}\n");
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -349,12 +355,13 @@ public class PositionMapperWithTCPStatus : MonoBehaviour
     private void SetStatus(ConnState state, string msg)
     {
         _connState = state;
+        
         string label = state switch
         {
-            ConnState.Online     => "🟢 Online  |  " + msg,
-            ConnState.Connecting => "🟡 " + msg,
-            ConnState.Rejected   => "🔴 Rejected  |  " + msg,
-            _                    => "⚫ " + msg
+            ConnState.Online     => "Online",
+            ConnState.Connecting => "Connecting",
+            ConnState.Rejected   => "Rejected",
+            _                    => "Offline"
         };
         Debug.Log("[ArmStatus] " + label);
         if (statusLabel != null) statusLabel.text = label;
