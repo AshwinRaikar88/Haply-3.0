@@ -2381,7 +2381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc7847c5155948a78e48cc886a43ab8b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectedDeviceId: 
+  selectedDeviceId: 61610
   verseGripTypeFilter: 0
   coordinateConverter:
     m_UseConstant: 1
@@ -2437,7 +2437,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b822b74c1d7443fae50e4d64166622e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectedDeviceId: 
+  selectedDeviceId: 04E0
   coordinateConverter:
     m_UseConstant: 1
     m_ConstantValue:
@@ -2475,7 +2475,7 @@ MonoBehaviour:
       m_Calls: []
   cursor: {fileID: 421801852}
   body: {fileID: 0}
-  selectedHandedness: 2
+  selectedHandedness: 1
   PowerSupplyStatusChanged:
     m_PersistentCalls:
       m_Calls: []
